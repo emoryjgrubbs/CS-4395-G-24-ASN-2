@@ -13,7 +13,10 @@ import string
 from argparse import ArgumentParser
 import pickle
 
+
 unk = '<UNK>'
+
+
 # Consult the PyTorch documentation for information on the functions used below:
 # https://pytorch.org/docs/stable/torch.html
 class RNN(nn.Module):
@@ -21,7 +24,7 @@ class RNN(nn.Module):
         super(RNN, self).__init__()
         self.h = h
         self.numOfLayer = 1
-        self.rnn = nn.RNN(input_dim, h, self.numOfLayer, nonlinearity='tanh')
+        self.rnn = nn.RNN(input_dim, h, self.numOfLayer, nonlinearity='tanh', batch_first=True)
         self.W = nn.Linear(h, 5)
         self.softmax = nn.LogSoftmax(dim=1)
         self.loss = nn.NLLLoss()
@@ -30,13 +33,16 @@ class RNN(nn.Module):
         return self.loss(predicted_vector, gold_label)
 
     def forward(self, inputs):
-        # [to fill] obtain hidden layer representation (https://pytorch.org/docs/stable/generated/torch.nn.RNN.html)
-        _, hidden = 
-        # [to fill] obtain output layer representations
+        # obtain hidden layer representation
+        _, hidden = self.rnn(inputs)
+        # obtain output layer representations from hidden
+        outputs = self.W(hidden)
 
-        # [to fill] sum over output 
+        # sum over sequence for output
+        summed_output = torch.sum(outputs, dim=1)
 
-        # [to fill] obtain probability dist.
+        # softmax for probability dist.
+        predicted_vector = self.softmax(summed_output)
 
         return predicted_vector
 
@@ -50,19 +56,19 @@ def load_data(train_data, val_data):
     tra = []
     val = []
     for elt in training:
-        tra.append((elt["text"].split(),int(elt["stars"]-1)))
+        tra.append((elt["text"].split(), int(elt["stars"]-1)))
     for elt in validation:
-        val.append((elt["text"].split(),int(elt["stars"]-1)))
+        val.append((elt["text"].split(), int(elt["stars"]-1)))
     return tra, val
 
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("-hd", "--hidden_dim", type=int, required = True, help = "hidden_dim")
-    parser.add_argument("-e", "--epochs", type=int, required = True, help = "num of epochs to train")
-    parser.add_argument("--train_data", required = True, help = "path to training data")
-    parser.add_argument("--val_data", required = True, help = "path to validation data")
-    parser.add_argument("--test_data", default = "to fill", help = "path to test data")
+    parser.add_argument("-hd", "--hidden_dim", type=int, required=True, help="hidden_dim")
+    parser.add_argument("-e", "--epochs", type=int, required=True, help="num of epochs to train")
+    parser.add_argument("--train_data", required=True, help="path to training data")
+    parser.add_argument("--val_data", required=True, help="path to validation data")
+    parser.add_argument("--test_data", default="to fill", help="path to test data")
     parser.add_argument('--do_train', action='store_true')
     args = parser.parse_args()
 
@@ -112,14 +118,14 @@ if __name__ == "__main__":
                 input_words = input_words.translate(input_words.maketrans("", "", string.punctuation)).split()
 
                 # Look up word embedding dictionary
-                vectors = [word_embedding[i.lower()] if i.lower() in word_embedding.keys() else word_embedding['unk'] for i in input_words ]
+                vectors = [word_embedding[i.lower()] if i.lower() in word_embedding.keys() else word_embedding['unk'] for i in input_words]
 
                 # Transform the input into required shape
                 vectors = torch.tensor(vectors).view(len(vectors), 1, -1)
                 output = model(vectors)
 
                 # Get loss
-                example_loss = model.compute_Loss(output.view(1,-1), torch.tensor([gold_label]))
+                example_loss = model.compute_Loss(output.view(1, -1), torch.tensor([gold_label]))
 
                 # Get predicted label
                 predicted_label = torch.argmax(output)
@@ -141,7 +147,6 @@ if __name__ == "__main__":
         print("Training completed for epoch {}".format(epoch + 1))
         print("Training accuracy for epoch {}: {}".format(epoch + 1, correct / total))
         trainning_accuracy = correct/total
-
 
         model.eval()
         correct = 0
