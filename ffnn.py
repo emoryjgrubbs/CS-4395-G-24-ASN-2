@@ -197,17 +197,14 @@ if __name__ == "__main__":
     correct = 0
     total = 0
     print("Test started for final model")
-    minibatch_size = 16
     N = len(test_data)
-    for minibatch_index in tqdm(range(N // minibatch_size)):
+    for input_vector, gold_label in tqdm(test_data):
         optimizer.zero_grad()
-        for example_index in range(minibatch_size):
-            input_vector, gold_label = test_data[minibatch_index * minibatch_size + example_index]
-            predicted_vector = model(input_vector)
-            predicted_label = torch.argmax(predicted_vector)
-            correct += int(predicted_label == gold_label)
-            total += 1
-            example_loss = model.compute_Loss(predicted_vector.view(1, -1), torch.tensor([gold_label]))
+        predicted_vector = model(input_vector)
+        predicted_label = torch.argmax(predicted_vector)
+        correct += int(predicted_label == gold_label)
+        total += 1
+        example_loss = model.compute_Loss(predicted_vector.view(1, -1), torch.tensor([gold_label]))
     print("Test completed for final model")
     print("Test accuracy for final model: {}".format(correct / total))
     # write out to results/test.out
